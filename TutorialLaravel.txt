@@ -1,0 +1,552 @@
+///------PASOS PARA REALIZAR UNA APP EN LARAVEL-----////
+** tener instalado: composer, xampp, editor de texto
+----- 1. CREAR LA APP----
+laravel new nombre_proyect  (basico sin login)
+laravel new nombre_proyect --jet  (para tener inertia ó livewire)
+---------------------------
+------2. SI SE DESEA QUE TENGA LOGIN---no necesario si estas en --jet-----
+npm install && npm run dev
+composer require laravel/ui
+php artisan ui bootstrap --auth /ó/ php artisan ui vue --auth
+npm run dev
+--------------------------------------------
+--------3.  EDITAR BASE DE DATOS DEL PROYECTO-----------
+
+INDICAR LA BASE DE DATOS A USAR (CREARLA EN PHPMYADMIN Ó SQLITE)
+INDICAR EL NOMBRE DE BD
+
+SI SE USA MYSQL:
+* ir a app > provider archivo AppServiceProvider.php
+	agrgar funcion:
+	debajo del name space:
+		use Illuminate\Support\Facades\Schema;
+	public function boot()
+    	{
+        //
+        Schema::defaultStringLength(191);
+    	}
+SI SE USA sqlite: 
+	1. touch database/database.sqlite
+	2. modificar archivo env
+		DB_CONNECTION=sqlite
+		DB_DATABSE=database/database.sqlite
+			** Incluir el archivo de la bd en ese directorio
+		DB_FOREIN_KEYS = true
+-----------------------------------------------
+--------4. HACER LAS MIGRACIONES POR DEFECTO DE LA APP------
+php artisan migrate
+
+-------------------------------------------------------
+---------5. CREAR ARCHIVO MIGRACIONES DE OTRAS TABLAS A USAR EN EL PROYECTO----
+php artisan make:migration CreateNombreTable
+
+*Para crear una migración y su respectivo modelo al mismo tiempo usa –m al final:
+       php artisan make:migration CreateNombreTable -m
+
+** VOLVER A MIGRAR PARA CREAR LAS TABLAS NUEVAS A LA BASE DE DATOS
+	php artisan migrate
+	php artisan migrate:refresh // agrega nuevas
+	php artisan migrate:refresh --path=/database/migrations/fileName.php  // unica tabla
+
+*** automatizar el llenado de datos en una tabla (ver crear una seed)
+	php artisan migrate --seed
+-------------------------------------------------------------------------------
+//   ejemplo de funcion up para crear una tabla en las migraciones
+	en la seccion schema::create
+	ejemplo:
+	 $table->increments('id');
+	$table->string('nombre');
+	$table->char('name', 100);
+	$table->date('fecha');
+	$table->decimal('amount', 8, 2);
+	$table->double('amount', 8, 2);
+	$table->float('amount', 8, 2);
+	$table->year('birth_year');
+	//  foraneas
+	$table->integer('id_cliente')->unsigned();
+	$table->foreign('id_cliente')->references('id')->on('clientes');
+-----------------------------------------------
+//////////////////////////////////////////////////////
+---------------SEEDER------------------
+1. php artisan make:seeder nombreseeder
+-----------------------------------------
+2. en el archivo seeder creado añadir: 
+
+ use Illuminate\Support\Facades\DB;
+
+    public function run()
+    {
+        DB::table('tabla')->insert([
+            'campo' => 'Dato a insertar',
+	    'password' => bcrypt('laravel')
+        ]);
+    }
+---------------------------------------------------
+3. en el seeder principal incluir
+
+class DatabaseSeeder extends Seeder
+{
+    public function run()
+    {
+ 
+        // Ejecutar los seeders:
+        $this->call(nombreseedercreado::class);
+    }
+
+------------------------------------------------
+3. ejecutar seeder
+todos:   php artisan db:seed
+unico: php artisan db:seed --class=nombreseedercreado
+
+////////////////////////////////////////////////////////
+------------------------------------------
+------6.  CREAR EL MODELO--------------
+* Modelo con: -Migracion-Controler-recursos
+php artisan make:model nombreTabla -mcr
+
+**Modelo con: -migracion
+php artisan make:model nombreTabla -m
+
+*** Solo el modelo
+php artisan make:model nombreTabla
+
+----------------------------------------
+-------7. CREAR EL CONTROLER-------------
+php artisan make:controller nombre
+
+** Es recomendado usar los comandos del model, asi crea el controller de una vez
+
+------------------------------------------
+-------8. CREAR COMPONENTES-------------
+
+php artisan make:component NOMBRE
+
+----------------------------------------
+-------9. CREAR LA VISTA ---MANUALMENTE------------
+en la carpeta resourses>views
+	* incluir un archivo nombre.blade.php
+	* puede incluir una carpeta y dentro los archivos de vada vista
+
+
+-----------------------------------
+--------10. CREAR LA RUTA DE LA VISTA--------------
+ir al controlador de la vista y agregar en la funcion index:
+	 return view('vista'); // 'vista' es el nombre de la vista, sin el .blade
+	* si esta en una carpeta:
+	  return view('nombreCarpeta/vista');
+
+ir a routes>web e ncluir:
+	
+Route::get('/cursos', [App\Http\Controllers\CursosController::class, 'index'])->name('curso');
+	    extencion de la url             noombre del controlador           nombre abreviado
+
+en la plantilla de menu  views>layouts>app.blade.php colocar los enlaces asi:
+
+<a href="{{ route('curso') }}" class="text-sm text-gray-700 dark:text-gray-500 underline">Enlace</a>
+                    *Nombre abreviado
+ ------------------------------------
+--------------11. VISTA RESTRINGIDA POR USUARIO-----------
+INCLUIR EN EL CONTROLER DE LA VISTA:
+//-- como primera funcion de la lista de funciones
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////
+--------------------------------------------------------------
+--------------- CODIGOS PARA LAS VISTAS:-------------------------
+
+en resourse views estan las vistas:
+* layouts>app.blade.php :  es el menu de la aplicacion
+* las carpetas sass, css y js, son los recursos para los estilos q se necesiten
+* la carpeta lang permite cambiarle el idioma a laravel
+* la carpeta components, alli se crean los componentes (ver punto 8)
+* las paginas home y welcome, vienen por defecto por laravel, se pueden eliminar o modificar
+-------------------------------------------------------------------------
+codigos blade:
+-----------------------------------------------------------------
+escribir variables:  <h2>{{ $variable }}</h2>
+------------------------------------------------------------------
+condicionales y foreach:
+
+@if( $pasteles->count() > 10 )
+    <h1>Hay muchos Pasteles</h1>
+@endif
+<h1>Lista de pasteles</h1>
+@foreach($pasteles as $pastel)
+    <h2>{{ $pastel->nombre }}</h2>
+@endforeach
+---------------------------------------------------------------
+añadir codigo de otra plantilla
+@extends('carpeta/plantilla')  //  si esta dentro de otra carpeta dentro de views
+@extends('plantilla') // si esta directo en la carpeta views
+--------------------------------------------------------
+crear una plantilla:
+si estamos creando el menu, en algun punto del  menu, donde deseamos
+que aparezca el codigo de otras paginas hay que colocar:
+   		@yield('nombre_seccion')
+luego en la pagina donde usamos el @extends,  el codigo propio de esa pagina
+inluirlo dentro de estos indicadores:
+	@section('nombre_seccion')
+	----- codigo propio de esa pagina-----------
+	@endsection
+--------------------------------------------------------------------------
+si se desea incluir contenido html, escrito en componentes:
+	@include('components.table')
+
+-------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+********************************************************************
+-------------------------12. CRUD--------------------------------------
+***********************************************************************
+/////////////////////////////////////////////////////////////////////
+En ves de escribir cada ruta a cada funcion del controlador
+se puede usar:
+
+	Route::resource('photos', PhotoController::class);
+
+incluso varios al mismo tiempo como un array
+
+	Route::resources([
+    	'photos' => PhotoController::class,
+    	'posts' => PostController::class,
+	]);
+---------------------------------------------------------------------
+Acciones gestionadas por controladores de recursos
+*********************************************************************
+Verbo	  URI	               Acción	Nombre de ruta
+GET	  /photos	        index	 photos.index
+GET	  /photos               create	 create	photos.create
+POST	  /photos	        store	 photos.store
+GET	  /photos/{photo}       show	 photos.show
+GET	  /photos/{photo}/edit	edit	 photos.edit
+PUT/PATCH /photos/{photo}	update	 photos.update
+DELETE	  /photos/{photo}	destroy	 photos.destroy
+
+/////////////////////////////////////////////////////////////////////
+A. MOSTRAR--------------------------------------------------------
+1. INCLUIR LA RUTA DE LA FUNCION INDEX DEL CONTROLADOR EN WEB.PHP
+Route::get('/hijos', [App\Http\Controllers\HijosController::class, 'index'])->name('hijos');
+----------------------------------------------------------------------
+2. actualizar la funcion index
+antes:
+     
+    public function index()
+    {
+        return view('cursos/cursos');
+    }
+
+despues:
+
+public function index()
+{
+       $dato=[1,2,3];
+       $cursos = DB::table('cursos')->get();
+       return view('cursos/cursos', ['cursos' => $cursos->toArray(), 'dato'=>$dato]););
+}
+
+arriba incluir:
+use Illuminate\Support\Facades\DB as FacadesDB;
+---------------------------------------------------------------
+OTRO METODO PARA MOSTRAR TABLAS o TABLAS PIVOTES
+a veces se necesita mostrar tablas combinadas, 
+es más facil con consultas sql
+    public function index()
+    {
+        $i=1;
+        $iduser= Auth::user()->id;
+        $hijos = DB::table('hijos')->get();
+        $cursos = DB::table('cursos')->get();
+        $pagos= DB::select("select p.id_user, p.fecha, c.materia, concat(h.nombres, ' ', h.apellidos) as alumno, p.tipopago, p.verificar 
+        from pagos p
+        inner join cursos c on c.id = p.id_cursos
+        inner join hijos h on h.id = p.id_hijos
+        where p.id_user= '$iduser'
+        order by p.fecha");
+        return view('pagos/payment', ['i'=>$i, 'hijos' => $hijos->toArray(), 'cursos' => $cursos->toArray(), 'pagos' => $pagos]);
+    }
+** cuando se pasa una tabla con el metodo DB::table, se retorna conel ->get() y se le añade despues el ->toArra a la variable,
+mientras que con el metodo DB::select no lleva ni el get al final del sql, y la vaeiable se pasa sin el toArray
+** los metodos DB no deben usarse con variables dependientes del usuario, ya que son faciles de hackear
+-----------------------------------------------------------------
+3. ya se puede usar la variable $curso, para pintar la tabla  
+o los datos que hay en ella
+
+    @foreach ($cursos as $item)
+    <li>{{$item->id}}--{{$item->materia}}--{{$item->horas}}</li>
+    @endforeach
+
+    <br>
+
+   {{  count($dato) }}
+
+   @foreach ($dato as $item)
+       <li>{{$item}}</li>
+   @endforeach
+
+--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+b. INSERTAR----------------------------------------------------------
+1.  en el archivo del MODELO incluir:
+
+protected $fillable = ['campo1', 'campo2', 'campo3'];
+-------------------------------------------------------
+2. en routes/web.php incluir la ruta post del archivo q tiene el formulario
+
+Route::post('/paginavista', [App\Http\Controllers\nombretablaController::class, 'store']);
+------------------------------------------------------------------------
+3. en el controlador de la tabla a insertar datos, en la funcion store, agregar:
+
+
+public function store(Request $request) {
+  nombretabla::create($request->all());
+  return redirect('nombrepagina');
+}
+
+
+--------------------------------------------------------------
+4. incluir en el formulario el atributo acction:
+
+dentro del form de apertura:  action="{{URL::to('/')}}/paginavista" // MISMA PASO 2.
+
+debajo del form de apertura: {!! csrf_field() !!}   // TOKEN DE SEGURIDAD DE LARAVEL
+
+------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////
+C. EDITAR---------------------------------------------------------------
+c.1 MOSTRAR:-------------------------------------------------------------
+1. en las rutas agregar:
+
+
+Route::put('editarhijos/{id}',  [App\Http\Controllers\HijosController::class, 'edit']);
+
+-----------------------------------------------------------------------------
+2. en la vista: enlace para ir al formulario de editar
+
+<a  href="editarhijos/{{$item->id}}">Editar</a>
+--------------------------------------------------------
+3. el controlador
+
+    public function edit($id)
+    {
+        $hijo=hijos::find($id);
+        return view('hijos/editar',['hijo'=>$hijo]);));
+    }
+------------------------------------------------------------------
+4.  en la vista de la pagina de editar
+colocar los value en los input correspondientes
+
+value="{{ $hijo->nombres }}
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+c.2 ACTUALIZAR DATOS
+1.  ruta en web. app
+
+Route::put('actualizar/{id}/edit',  [App\Http\Controllers\HijosController::class, 'update']);
+-------------------------------------------------------------
+2. en la vista
+<form class="" action="{{ url('actualizar/'.$hijo->id.'/edit')}}" method="POST"  style="width: 450px">
+            @csrf
+            {{ method_field('PUT')}}
+//------ ene l formulario colocar los name correspondientes
+//------ el boton debe ser tipo submit
+------------------------------------------------------------
+3. en el controlador la funcion update
+
+        DB::table('hijos')
+            ->where('id', $id)
+            ->update([
+                'id_user' => $request->get('id_user'),
+                'nombres' => $request->get('nombres'),
+                'apellidos' => $request->get('apellidos'),
+                'edad' => $request->get('edad'),
+                'fechanacimiento' => $request->get('fechanacimiento'),
+            ]);
+
+	//--- datos para que regrese a la tabla inicial--//
+	return redirect('hijos');
+
+
+------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////
+D. ELIMINAR--------------------------------------------------------------
+1. indicar la ruta donde se pasará el {{id}} y usara el metodo destroy
+
+Route::delete('hijos/{id}', [App\Http\Controllers\HijosController::class, 'destroy']);
+-------------------------------------------------------------
+2. en la vista indicar en la accion eliminar la url:
+
+                <form method="POST" action="{{ url("hijos/{$item->id}") }}">
+                  @csrf
+                  @method('DELETE')
+                  <button class="btn btn-link" type="submit">Eliminar</button>
+                </form>
+------------------------------------------------------------------
+3. en el controlador de la tabla a eliminar un dato
+
+    public function destroy($id)
+    {
+        DB::table('hijos')->delete($id);
+        return redirect('/');
+    }
+
+----------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////
+--------------------CRUD AUTOMATICO-----------------------------------
+composer require flightsadmin/livewire-crud
+php artisan crud:install
+php artisan crud:generate nombreTabla
+----------------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+OTROS DATOS:
+conocer el nombre del usuario activo {{ Auth::user()->name }}
+conocer el id del usuario activo {{ Auth::user()->id }}
+conocer el rol del usuario activo {{ Auth::user()->rol }}
+
+
+------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////
+contador de tablas combinadas:
+	$programa = self::$programa;
+        $totalData = DB::table('tblSesionesComite as sc')
+                        ->join('tblCComites as c','c.idComite','sc.idComite')
+                        ->where('c.idProgramaSocial',$programa)
+                        ->count(); // contador
+
+
+    EJEMPLO VARIAS TABLAS:
+	$cliente = cliente::all();
+        $Producto = Producto::all();
+        return view('ejemplo', array('cliente' => $cliente, 'Producto' => $Producto));
+    EJEMPLO DE OTRO METODO DE CONEXION CON INSTRUCCIONDES SQL
+	use DB;
+	-------
+	$cliente = DB::table('cliente')     // cliente= nombre de la tabla deseada
+			->orderBy('campoTabla a ordenar', 'desc')
+			->get();
+	return view('ejemplo', array('cliente' => $cliente));
+***************************************************************************
+////////////////////////////////////////////////////////////////////////////
+---------------------------------------------------------------------------
+--------CONVENSIONES DE NOMBRES EN LARAVEL------------------------------------
+MODELOS, CONTROLADORES: PascalCase 
+- PRIMERA MAYUSCULA Y SINGULAR, EJEMPLO: User
+- DOS PALABRAS:  UserPost
+
+METODOS Y FUNCIONES: camelCcase
+- primera palabra en minuscula y singular
+- dolas palabras la segunda palabra la inicial en mayuscula
+- ejemploes:  index, indexDay
+
+TABLAS: snake_case
+- minuscula, en plural
+-dos palabras, separadas con piso bajo
+ejemplo: usuarios, usuarios_eliminados
+
+ TABLAS PIVOTES (UNIDAS): snake_case
+- en singular
+- ordenado alfabeticamente las tablas que se desean enlazar
+- ejemplo: categoria_cliente_producto
+
+** PREFERIBLEMENTE EN INGLES
+
+------------------------------------------------------
+///////////////////////////////////////////////////
+------------------------------------------------------
+--------------------SELECT DINAMICOS---------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+-----------------------------------------------------------
+///////////////////////////////////////////////////////////////
+---------------------------------------------------------------
+-------------------------PDF----------------------------------
+1. INSTALAR:
+
+composer require barryvdh/laravel-dompdf
+-----------------------------------------------------------------
+2. SE MODIFICA EL CONFIG > APP.PHP EN LA SECCION DEL * Package Service Providers...
+GENERALMENTE DESPUES D ELA LINEA 166, INCLUIR:
+
+Barryvdh\DomPDF\ServiceProvider::class,
+------------------------------------------------------------
+3. ejecutar el provider:
+
+php artisan vendor:publish --provider="Barryvdh\DomPDF\ServiceProvider"
+
+--------------------------------------------------------------
+4. en la ruta:
+
+Route::get("print/{id}", function ($id) {
+
+    //$pagos = DB::table('pagos')->where('id', $id)->get();
+    //  ó
+
+    $iduser= Auth::user()->id;
+    $pagos= DB::select("select p.id, p.id_user, p.fecha, c.materia, concat(h.nombres, ' ', h.apellidos) as alumno, p.tipopago, p.costo, p.verificar 
+        from pagos p
+        inner join cursos c on c.id = p.id_cursos
+        inner join hijos h on h.id = p.id_hijos
+        where p.id_user = '$iduser'
+        and p.id = '$id'
+        order by alumno");
+    $dompdf = App::make("dompdf.wrapper");
+    $dompdf->loadView("components/imprimir", [
+        "pagos" => $pagos,
+    ]);
+    return $dompdf->stream();
+
+});
+-------------------------------------------------------------------
+en los enlaces a mandar a imprimir:
+	 <a  href="print/{{$item->id}}" target="_blank" >Ver</a>
+
+-----------------------------------------------------------------
+en la vista a imprimir: 
+ejemplo:
+<div>
+<h2>Recibo de pago:</h2>
+<br>
+Fecha de pago: {{$pagos[0]->fecha}}
+<br>
+Número de pago: {{$pagos[0]->id}}
+<br>
+Curso adquirido: {{$pagos[0]->materia}}
+<br>
+Beneficiario del curso: {{$pagos[0]->alumno}}
+<br>
+Tipo de pago: {{$pagos[0]->tipopago}}
+<br>
+Monto cancelado: {{$pagos[0]->costo}}
+<br>
+</div>
+------------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+----------------------------------------------------------------------------
+librerias de alertas:  alertify /  toastr / sweetalert2
+--------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////
+---------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
